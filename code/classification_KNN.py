@@ -2,8 +2,8 @@
 
 #******************************************************************************
 #
-# Name        : classification_NB.py
-# Description : preprocess the youtube 8m dataset
+# Name        : classification_KNN.py
+# Description : KNN classifier for the youtube 8m dataset
 # Author      : Fares Meghdouri
 
 #******************************************************************************

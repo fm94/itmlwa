@@ -2,8 +2,8 @@
 
 #******************************************************************************
 #
-# Name        : classification_NB.py
-# Description : NB classifier for the youtube 8m dataset
+# Name        : classification_SVM.py
+# Description : SVM classifier for the youtube 8m dataset
 # Author      : Fares Meghdouri
 
 #******************************************************************************
@@ -12,12 +12,14 @@ import numpy as np
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import StratifiedShuffleSplit
 from evolutionary_search import EvolutionaryAlgorithmSearchCV
-from sklearn.naive_bayes import GaussianNB   
+from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 
 SEED = 2019
-SCORING = ['f1_micro']
+SCORING = ['f1_weighted']
+tune = False
+
 
 def read_data(input):
 
@@ -30,14 +32,13 @@ def read_data(input):
 
 def tune(model, X, y, cv):
 
-	min_samples_leaf_range = np.round(np.linspace(1, 10, 10)).astype(int)
-	max_depth_range 	   = np.round(np.linspace(1, 30, 30)).astype(int)
-	param_dist 			   = dict(min_samples_leaf=min_samples_leaf_range, max_depth=max_depth_range)
-	num_features		   = len(X_train_little[0])
+	C = np.round(np.linspace(1, 10, 10)).astype(int)
+	param_dist 			   = dict(C=C,)
+	#num_features		   = len(X[0])
 
 	best_model 			   = EvolutionaryAlgorithmSearchCV( estimator     	    = model,
 															params              = param_dist,
-															scoring             = "f1",
+															scoring             = "f1_weighted",
 															cv                  = cv,
 															verbose				= 1,
 															population_size	    = 50,
@@ -46,7 +47,7 @@ def tune(model, X, y, cv):
 															tournament_size		= 3,
 															generations_number	= 6,
 															n_jobs				= 4)
-	best_model.fit(X_train_little, y_train_little)
+	best_model.fit(X, y)
 
 	return best_model
 
@@ -56,17 +57,20 @@ def cr():
 def main():
 
 	X_train, X_validate, y_train, y_validate = read_data('youtube8m_clean')
-	NB = GaussianNB()
+	svc = SVC(kernel='sigmoid')
 	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
-	NB.fit(X_train, y_train)
-	sc_tr = cross_validate(NB, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
-	sc_ts = cross_validate(NB, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
+	if tune:
+		best_model = tune(svc, X_train, y_train, cv)
+		svc = SVC(best_model.best_estimator_.C, kernel='sigmoid')
+	svc.fit(X_train, y_train)
+	sc_tr = cross_validate(svc, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
+	sc_ts = cross_validate(svc, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_micro'].mean(), sc_tr['test_f1_micro'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_micro'].mean(), sc_ts['test_f1_micro'].std() * 2))
+	print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
+	print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
 	
-	pred_validate = NB.predict(X_validate)
-	pred_train = NB.predict(X_train)
+	pred_validate = svc.predict(X_validate)
+	pred_train = svc.predict(X_train)
 
 	print('######## C-MATRIX ############')
 

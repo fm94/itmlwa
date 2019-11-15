@@ -2,8 +2,8 @@
 
 #******************************************************************************
 #
-# Name        : classification_NB.py
-# Description : preprocess the youtube 8m dataset
+# Name        : classification_RF.py
+# Description : RF classifier for the youtube 8m dataset
 # Author      : Fares Meghdouri
 
 #******************************************************************************
