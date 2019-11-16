@@ -18,7 +18,7 @@ import numpy as np
 
 N = 3844
 #N = 100 # test dataset
-chosen_labels = ['1164','1119','1184']
+chosen_labels = ['852', '1848']
 output_file = '/localdisk/fm-youtube8m/train_full_{}.csv'.format('_'.join(chosen_labels))
 input_dir = 'dataset/'
 
@@ -26,11 +26,12 @@ input_dir = 'dataset/'
 
 def main():
 
-    l = []
+    #l = []
     error_log = []
 
     with open(output_file, 'a') as f:
         for index in range(N):
+            l = []
             try:
                 for r in tensorflow.compat.v1.python_io.tf_record_iterator('{}'.format(input_dir)+'train%04d.tfrecord' % index):
                     a = tensorflow.train.Example.FromString(r)
@@ -50,7 +51,10 @@ def main():
                     df2 = pd.DataFrame([{x: y for x, y in enumerate(item)} for item in df['rgb'].values.tolist()], index=df.index)
                     df2 = df2.add_prefix('rgb_')
                     final = pd.concat([df1, df2, df['label']], axis=1)
-                    final.to_csv(f, header=False, index=False)
+                    if index == 0:                    
+                        final.to_csv(f, header=True, index=False)
+                    else:
+                        final.to_csv(f, header=False, index=False)
                 print('>> finished with {}'.format(input_dir)+'train%04d.npy' % index)
 
             except Exception as e:

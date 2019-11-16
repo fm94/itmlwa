@@ -18,7 +18,7 @@ from sklearn.metrics import classification_report
 
 SEED = 2019
 SCORING = ['f1_weighted']
-tune = False
+tune_flag = False
 
 
 def read_data(input):
@@ -59,7 +59,7 @@ def main():
 	X_train, X_validate, y_train, y_validate = read_data('youtube8m_clean')
 	KNN = KNeighborsClassifier(2, metric='euclidean')
 	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
-	if tune:
+	if tune_flag:
 		best_model = tune(KNN, X_train, y_train, cv)
 		KNN = KNeighborsClassifier(best_model.best_estimator_.n_neighbors, metric='euclidean')
 	KNN.fit(X_train, y_train)

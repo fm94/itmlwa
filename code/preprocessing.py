@@ -19,13 +19,14 @@ from sklearn.tree import DecisionTreeClassifier
 
 #******************************************************************************
 SEED = 2019
-use_pca = True
+use_pca = False
 use_feature_selection = True
 pca_component = 200
 
-chosen_labels = ['15','19','21']
+chosen_labels = ['1049','1016','1184']
+
 input_train = '/localdisk/fm-youtube8m/train_full_{}.csv'.format('_'.join(chosen_labels))
-input_validation = '/localdisk/fm-youtube8m/validation_full_{}.csv'.format('_'.join(chosen_labels))
+input_validation = '/localdisk/fm-youtube8m/validate_full_{}.csv'.format('_'.join(chosen_labels))
 #******************************************************************************
 
 def read_data(input):

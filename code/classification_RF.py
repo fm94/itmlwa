@@ -18,7 +18,7 @@ from sklearn.metrics import classification_report
 
 SEED = 2019
 SCORING = ['f1_weighted']
-tune = False
+tune_flag = False
 
 def read_data(input):
 
@@ -59,7 +59,7 @@ def main():
 	X_train, X_validate, y_train, y_validate = read_data('youtube8m_clean')
 	RF = RandomForestClassifier()
 	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
-	if tune:
+	if tune_flag:
 		best_model = tune(RF, X_train, y_train, cv)
 		RandomForestClassifier(min_samples_leaf = rnds.best_estimator_.min_samples_leaf, 
 							   max_depth        = rnds.best_estimator_.max_depth,
