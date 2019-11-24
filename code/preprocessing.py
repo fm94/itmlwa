@@ -19,11 +19,11 @@ from sklearn.tree import DecisionTreeClassifier
 
 #******************************************************************************
 SEED = 2019
-use_pca = False
+use_pca = True
 use_feature_selection = True
-pca_component = 200
+pca_component = 600
 
-chosen_labels = ['1049','1016','1184']
+chosen_labels = ['19','23','33']
 
 input_train = '/localdisk/fm-youtube8m/train_full_{}.csv'.format('_'.join(chosen_labels))
 input_validation = '/localdisk/fm-youtube8m/validate_full_{}.csv'.format('_'.join(chosen_labels))
@@ -81,12 +81,14 @@ def explain_PCA(X_train, X_validation, features):
 	#covar_matrix = PCA()
 	covar_matrix.fit(X_train)
 	variance = covar_matrix.explained_variance_ratio_
-	var=np.cumsum(np.round(covar_matrix.explained_variance_ratio_, decimals=3)*100)
-	
-	plt.plot(var)
-	plt.ylabel('% Variance Explained')
-	plt.xlabel('# of Features')
-	plt.title('PCA Analysis')
+	#var=np.cumsum(np.round(covar_matrix.explained_variance_ratio_, decimals=3)*100)
+	var=np.cumsum(covar_matrix.explained_variance_ratio_*100)
+
+	plt.plot(var, lw=3)
+	plt.grid()
+	plt.ylabel('% Cumulative Variance', fontsize=20)
+	plt.xlabel('# of Features', fontsize=20)
+	plt.title('PCA Analysis', fontsize=20)
 	plt.savefig('PCA_Analysis')
 	print('>> PCA analysis results done, plot saved at: {}'.format('PCA_Analysis.png'))
 	X_train_pca = covar_matrix.transform(X_train)

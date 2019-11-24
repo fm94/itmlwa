@@ -19,7 +19,7 @@ import numpy as np
 N = 3844
 #N = 100 # test dataset
 chosen_labels = ['19','23','33']
-output_file = '/localdisk/fm-youtube8m/train_full_{}.csv'.format('_'.join(chosen_labels))
+output_file = '/localdisk/fm-youtube8m/validate_full_{}.csv'.format('_'.join(chosen_labels))
 input_dir = 'dataset/'
 
 #******************************************************************************
@@ -40,7 +40,7 @@ def main():
             l = []
             counter = 0
             try:
-                for r in tensorflow.compat.v1.python_io.tf_record_iterator('{}'.format(input_dir)+'train%04d.tfrecord' % index):
+                for r in tensorflow.compat.v1.python_io.tf_record_iterator('{}'.format(input_dir)+'validate%04d.tfrecord' % index):
                     a = tensorflow.train.Example.FromString(r)
                     #id = a.features.feature['id'].bytes_list.value[0].decode('utf-8')
                     b = google.protobuf.json_format.MessageToJson(a)
@@ -64,7 +64,7 @@ def main():
                         final.to_csv(f, header=True, index=False)
                     else:
                         final.to_csv(f, header=False, index=False)
-                print('>> finished with {}'.format(input_dir)+'train%04d.npy' % index+'{} matchings found'.format(counter))
+                print('>> finished with {}'.format(input_dir)+'validate%04d.npy' % index+'{} matchings found'.format(counter))
 
             except Exception as e:
                 error_log.append(index)

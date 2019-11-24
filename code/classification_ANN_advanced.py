@@ -2,8 +2,8 @@
 
 #******************************************************************************
 #
-# Name        : classification_SVM.py
-# Description : SVM classifier for the youtube 8m dataset
+# Name        : classification_ANN.py
+# Description : ANN classifier for the youtube 8m dataset
 # Author      : Fares Meghdouri
 
 #******************************************************************************
@@ -12,19 +12,22 @@ import numpy as np
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import StratifiedShuffleSplit
 from evolutionary_search import EvolutionaryAlgorithmSearchCV
-from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+from keras.utils import to_categorical
+from keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 from sklearn.utils.multiclass import unique_labels
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import jaccard_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 
 SEED = 2019
-SCORING = ['accuracy', 'f1_weighted', 'jaccard_weighted']
-tune_flag = True
-
+chosen_labels = [19,23,33]
+n_classes = len(chosen_labels)
 
 def read_data(input):
 
@@ -33,28 +36,15 @@ def read_data(input):
 	y_train = np.load('data/training_labels.npy')
 	y_validate = np.load('data/validation_labels.npy')
 
+	y_train = np.where(y_train==chosen_labels[0], 0, y_train)
+	y_train = np.where(y_train==chosen_labels[1], 1, y_train)
+	y_train = np.where(y_train==chosen_labels[2], 2, y_train)
+
+	y_validate = np.where(y_validate==chosen_labels[0], 0, y_validate)
+	y_validate = np.where(y_validate==chosen_labels[1], 1, y_validate)
+	y_validate = np.where(y_validate==chosen_labels[2], 2, y_validate)
+
 	return X_train, X_validate, y_train, y_validate
-
-def tune(model, X, y, cv):
-
-	C = np.round(np.linspace(1, 10, 10)).astype(int)
-	param_dist 			   = dict(C=C,)
-	#num_features		   = len(X[0])
-
-	best_model 			   = EvolutionaryAlgorithmSearchCV( estimator     	    = model,
-															params              = param_dist,
-															scoring             = "f1_weighted",
-															cv                  = cv,
-															verbose				= 1,
-															population_size	    = 50,
-															gene_mutation_prob  = 0.10,
-															gene_crossover_prob = 0.5,
-															tournament_size		= 3,
-															generations_number	= 6,
-															n_jobs				= 4)
-	best_model.fit(X, y)
-
-	return best_model
 
 def plot_confusion_matrix(y_true, y_pred, classes,
                           normalize=False,
@@ -110,32 +100,61 @@ def plot_confusion_matrix(y_true, y_pred, classes,
     fig.tight_layout()
     return ax
 
-def cr():
-	pass
-
 def main():
 
 	X_train, X_validate, y_train, y_validate = read_data('youtube8m_clean')
-	svc = SVC(kernel='sigmoid')
-	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
-	if tune_flag:
-		best_model = tune(svc, X_train, y_train, cv)
-		svc = SVC(best_model.best_estimator_.C, kernel='sigmoid')
-	svc.fit(X_train, y_train)
-	sc_tr = cross_validate(svc, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
-	sc_ts = cross_validate(svc, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
+	y_train_categorical = to_categorical(y_train,n_classes)
+	y_validate_categorical = to_categorical(y_validate,n_classes)
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
-	
-	pred_validate = svc.predict(X_validate)
-	pred_train = svc.predict(X_train)
+	kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
+	cvscores = []
+
+	for train, test in kfold.split(X_train, y_train):
+
+		model = Sequential()
+		model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
+		model.add(Dense(48, activation='relu'))
+		model.add(Dropout(0.5))
+		model.add(Dense(32, activation='relu'))
+		model.add(Dense(n_classes, activation='sigmoid'))
+		model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+		earlyStopping = EarlyStopping(monitor='val_loss', min_delta=0.000001, patience=3, verbose=2, mode='auto')
+		model.fit(X_train[test], y_train_categorical[test],batch_size=32,epochs=50,verbose=1,validation_split=0.20, callbacks=[earlyStopping])
+
+		#pred =  model.predict_classes(X_train[test])
+
+		#pred = np.asarray([np.argmax(y, axis=None, out=None) for y in pred])
+		#y_train = np.asarray([np.argmax(y, axis=None, out=None) for y in y_train_categorical])
+
+		#cvscores['accuracy'].append(accuracy_score(y_train[test], pred))
+		#cvscores['f1'].append(f1_score(y_train[test], pred, average='weighted'))
+		#cvscores['js'].append(jaccard_score(y_train[test], pred, average='weighted'))
+
+		scores = model.evaluate(X_train[test], y_train_categorical[test], verbose=0)
+		print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+		cvscores.append(scores[1] * 100)
+	print("accuracy over 5 folds %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+
+
+	model = Sequential()
+	model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
+	model.add(Dense(48, activation='relu'))
+	model.add(Dropout(0.5))
+	model.add(Dense(32, activation='relu'))
+	model.add(Dense(n_classes, activation='sigmoid'))
+	model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+	earlyStopping = EarlyStopping(monitor='val_loss', min_delta=0.000001, patience=3, verbose=2, mode='auto')
+
+
+	# refit the model with full training data
+	model.fit(X_train, y_train_categorical,batch_size=32,epochs=50,verbose=1,validation_split=0.20, callbacks=[earlyStopping])
+
+	pred_validate = model.predict_classes(X_validate)
+	pred_train = model.predict_classes(X_train)
 
 	print('######## METRICS ############')
 	print('######## TRAINING SET ############')
@@ -148,26 +167,24 @@ def main():
 	print(jaccard_score(y_validate, pred_validate, average='weighted'))
 
 	print('######## C-MATRIX ############')
-
 	print('######## TRAINING SET ############')
 	print(confusion_matrix(y_train, pred_train), '\n\n')
 	print('######## VALIDATION SET ############')
 	print(confusion_matrix(y_validate, pred_validate), '\n\n')
 
 	print('######## REPORT ############')
-
 	print('######## TRAINING SET ############')
 	print(classification_report(y_train, pred_train), '\n\n')
 	print('######## VALIDATION SET ############')
 	print(classification_report(y_validate, pred_validate), '\n\n')
 
 	plot_confusion_matrix(y_train, pred_train, classes=np.unique(y_train), normalize=False,
-                      title='SVM training confusion matrix')
-	plt.savefig('SVM_tr_cm')
+                      title='ANN training confusion matrix')
+	plt.savefig('ANN_tr_cm')
 
 	plot_confusion_matrix(y_validate, pred_validate, classes=np.unique(y_train), normalize=False,
-                      title='SVM testing confusion matrix')
-	plt.savefig('SVM_ts_cm')
+                      title='ANN testing confusion matrix')
+	plt.savefig('ANN_ts_cm')
 
 if __name__ == "__main__":
 	main()
