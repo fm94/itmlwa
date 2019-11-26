@@ -21,7 +21,7 @@ from sklearn.tree import DecisionTreeClassifier
 SEED = 2019
 use_pca = True
 use_feature_selection = True
-pca_component = 600
+pca_component = 3
 
 chosen_labels = ['19','23','33']
 
@@ -95,8 +95,8 @@ def explain_PCA(X_train, X_validation, features):
 	X_validation_pca = covar_matrix.transform(X_validation)
 	print('>>>> reduction {} to {}'.format(X_train.shape, X_train_pca.shape))
 	print('>>>> reduction {} to {}'.format(X_validation.shape, X_validation_pca.shape))
-	#return X_train_pca, X_validation_pca
-	return X_train, X_validation
+	return X_train_pca, X_validation_pca
+	#return X_train, X_validation
 
 def feature_selection(X_train_pca, y_train, X_validation_pca):
 	""" Feature selection based on Decision Trees feature importance """
@@ -127,6 +127,8 @@ def main():
 	else:
 		X_train_clean, X_validation_clean = X_train_pca, X_validation_pca
 
+	X_train_clean, X_validation_clean = std_scaling(X_train_clean, X_validation_clean)
+	
 	os.mkdir('data')
 	np.save('data/training_data.npy', X_train_clean)
 	np.save('data/validation_data.npy', X_validation_clean)

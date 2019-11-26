@@ -23,6 +23,7 @@ from sklearn.metrics import accuracy_score
 
 SEED = 2019
 SCORING = ['accuracy', 'f1_weighted', 'jaccard_weighted']
+CV = False
 
 def read_data(input):
 
@@ -118,17 +119,18 @@ def main():
 	NB = GaussianNB()
 	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
 	NB.fit(X_train, y_train)
-	sc_tr = cross_validate(NB, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
-	sc_ts = cross_validate(NB, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
+	if CV:
+		sc_tr = cross_validate(NB, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
+		sc_ts = cross_validate(NB, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
 
 	
 	pred_validate = NB.predict(X_validate)

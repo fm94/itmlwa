@@ -24,7 +24,7 @@ from sklearn.metrics import accuracy_score
 SEED = 2019
 SCORING = ['accuracy', 'f1_weighted', 'jaccard_weighted']
 tune_flag = False
-
+CV = False
 
 def read_data(input):
 
@@ -94,11 +94,10 @@ def tune(model, X, y, cv):
 	min_samples_leaf_range = np.round(np.linspace(1, 10, 10)).astype(int)
 	max_depth_range 	   = np.round(np.linspace(1, 30, 30)).astype(int)
 	param_dist 			   = dict(min_samples_leaf=min_samples_leaf_range, max_depth=max_depth_range)
-	num_features		   = len(X_train_little[0])
 
 	best_model 			   = EvolutionaryAlgorithmSearchCV( estimator     	    = model,
 															params              = param_dist,
-															scoring             = "f1",
+															scoring             = "f1_weighted",
 															cv                  = cv,
 															verbose				= 1,
 															population_size	    = 50,
@@ -107,7 +106,7 @@ def tune(model, X, y, cv):
 															tournament_size		= 3,
 															generations_number	= 6,
 															n_jobs				= 4)
-	best_model.fit(X_train_little, y_train_little)
+	best_model.fit(X, y)
 
 	return best_model
 
@@ -125,17 +124,19 @@ def main():
 							   max_depth        = best_model.best_estimator_.max_depth,
 							   random_state     = SEED)
 	RF.fit(X_train, y_train)
-	sc_tr = cross_validate(RF, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
-	sc_ts = cross_validate(RF, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
+	if CV:
+		sc_tr = cross_validate(RF, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
+		sc_ts = cross_validate(RF, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
+
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
 
 	
 	pred_validate = RF.predict(X_validate)

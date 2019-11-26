@@ -24,10 +24,12 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import jaccard_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
+from keras.regularizers import l2
 
 SEED = 2019
 chosen_labels = [19,23,33]
 n_classes = len(chosen_labels)
+CV = False # perform a cross-validation
 
 def read_data(input):
 
@@ -107,51 +109,61 @@ def main():
 	y_train_categorical = to_categorical(y_train,n_classes)
 	y_validate_categorical = to_categorical(y_validate,n_classes)
 
-
-	kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
-	cvscores = []
-
-	for train, test in kfold.split(X_train, y_train):
-
-		model = Sequential()
-		model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
-		model.add(Dense(48, activation='relu'))
-		model.add(Dropout(0.5))
-		model.add(Dense(32, activation='relu'))
-		model.add(Dense(n_classes, activation='sigmoid'))
-		model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-		earlyStopping = EarlyStopping(monitor='val_loss', min_delta=0.000001, patience=3, verbose=2, mode='auto')
-		model.fit(X_train[test], y_train_categorical[test],batch_size=32,epochs=50,verbose=1,validation_split=0.20, callbacks=[earlyStopping])
-
-		#pred =  model.predict_classes(X_train[test])
-
-		#pred = np.asarray([np.argmax(y, axis=None, out=None) for y in pred])
-		#y_train = np.asarray([np.argmax(y, axis=None, out=None) for y in y_train_categorical])
-
-		#cvscores['accuracy'].append(accuracy_score(y_train[test], pred))
-		#cvscores['f1'].append(f1_score(y_train[test], pred, average='weighted'))
-		#cvscores['js'].append(jaccard_score(y_train[test], pred, average='weighted'))
-
-		scores = model.evaluate(X_train[test], y_train_categorical[test], verbose=0)
-		print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
-		cvscores.append(scores[1] * 100)
-	print("accuracy over 5 folds %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
-
-
 	model = Sequential()
-	model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
-	model.add(Dense(48, activation='relu'))
-	model.add(Dropout(0.5))
-	model.add(Dense(32, activation='relu'))
+	model.add(Dense(9, input_dim=X_train.shape[1], activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)))
+	#model.add(Dense(48, activation='relu'))
+	model.add(Dropout(0.3))
+	model.add(Dense(16, activation='relu', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01)))
 	model.add(Dense(n_classes, activation='sigmoid'))
 	model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 	earlyStopping = EarlyStopping(monitor='val_loss', min_delta=0.000001, patience=3, verbose=2, mode='auto')
 
+	if CV:
+		kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
+
+		# cross_validation over testing set
+		cvscores = []
+		for train, test in kfold.split(X_train, y_train):
+			model.fit(X_train[train], y_train_categorical[train],batch_size=32,epochs=50,verbose=1,validation_split=0.20)
+			scores = model.evaluate(X_train[test], y_train_categorical[test], verbose=0)
+			print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+			cvscores.append(scores[1] * 100)
+		print("accuracy over 5 folds for training set %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+
+		# cross_validation over validation set
+		#cvscores = []
+		#for train, test in kfold.split(X_validate, y_validate):
+		#	model.fit(X_validate[train], y_validate_categorical[train],batch_size=32,epochs=50,verbose=1,validation_split=0.20)
+		#	scores = model.evaluate(X_validate[test], y_validate_categorical[test], verbose=0)
+		#	print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+		#	cvscores.append(scores[1] * 100)
+		#print("accuracy over 5 folds for validation set %.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
 	# refit the model with full training data
-	model.fit(X_train, y_train_categorical,batch_size=32,epochs=50,verbose=1,validation_split=0.20, callbacks=[earlyStopping])
+	#history = model.fit(X_train, y_train_categorical,batch_size=32,epochs=50,verbose=1,validation_split=0.20, callbacks=[earlyStopping])
+	history = model.fit(X_train, y_train_categorical,batch_size=32,epochs=20,verbose=1,validation_split=0.20)
+
+	###########################################
+	# summarize history for accuracy
+	plt.figure()
+	plt.plot(history.history['accuracy'])
+	plt.plot(history.history['val_accuracy'])
+	plt.title('model accuracy')
+	plt.ylabel('accuracy')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'test'], loc='upper left')
+	plt.savefig('m_accuracy')
+	# summarize history for loss
+	plt.figure()
+	plt.plot(history.history['loss'])
+	plt.plot(history.history['val_loss'])
+	plt.title('model loss')
+	plt.ylabel('loss')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'test'], loc='upper left')
+	plt.savefig('m_loss')
+	###########################################
 
 	pred_validate = model.predict_classes(X_validate)
 	pred_train = model.predict_classes(X_train)
@@ -161,6 +173,7 @@ def main():
 	print(accuracy_score(y_train, pred_train))
 	print(f1_score(y_train, pred_train, average='weighted'))
 	print(jaccard_score(y_train, pred_train, average='weighted'))
+
 	print('######## VALIDATION SET ############')
 	print(accuracy_score(y_validate, pred_validate))
 	print(f1_score(y_validate, pred_validate, average='weighted'))

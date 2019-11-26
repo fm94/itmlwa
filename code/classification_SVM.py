@@ -23,8 +23,8 @@ from sklearn.metrics import accuracy_score
 
 SEED = 2019
 SCORING = ['accuracy', 'f1_weighted', 'jaccard_weighted']
-tune_flag = True
-
+tune_flag = False
+CV = False
 
 def read_data(input):
 
@@ -125,15 +125,16 @@ def main():
 	sc_tr = cross_validate(svc, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
 	sc_ts = cross_validate(svc, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
+	if CV:
+		print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
-	
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
+		
 	pred_validate = svc.predict(X_validate)
 	pred_train = svc.predict(X_train)
 

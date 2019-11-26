@@ -23,9 +23,8 @@ from sklearn.metrics import accuracy_score
 
 SEED = 2019
 SCORING = ['accuracy', 'f1_weighted', 'jaccard_weighted']
-tune_flag = True
-
-
+tune_flag = False
+CV = False
 def read_data(input):
 
 	X_train = np.load('data/training_data.npy')
@@ -116,24 +115,26 @@ def cr():
 def main():
 
 	X_train, X_validate, y_train, y_validate = read_data('youtube8m_clean')
-	KNN = KNeighborsClassifier(2, metric='euclidean')
+	KNN = KNeighborsClassifier(3, algorithm='kd_tree', n_jobs=2)
 	cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=SEED)
 	if tune_flag:
 		best_model = tune(KNN, X_train, y_train, cv)
-		KNN = KNeighborsClassifier(best_model.best_estimator_.n_neighbors, metric='euclidean')
+		KNN = KNeighborsClassifier(best_model.best_estimator_.n_neighbors, algorithm='kd_tree', n_jobs=2)
 	KNN.fit(X_train, y_train)
-	sc_tr = cross_validate(KNN, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
-	sc_ts = cross_validate(KNN, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
+	print('finished fitting')
+	if CV:
+		sc_tr = cross_validate(KNN, X_train, y_train, scoring=SCORING, cv=cv, return_train_score=False)
+		sc_ts = cross_validate(KNN, X_validate, y_validate, scoring=SCORING, cv=cv, return_train_score=False)
 
-	print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
-	print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_tr['test_accuracy'].mean(), sc_tr['test_accuracy'].std() * 2))
+		print("%0.3f (+/- %0.3f)" % (sc_ts['test_accuracy'].mean(), sc_ts['test_accuracy'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_f1_weighted'].mean(), sc_tr['test_f1_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_f1_weighted'].mean(), sc_ts['test_f1_weighted'].std() * 2))
 
-	#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
-	#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
-	
+		#print("%0.3f (+/- %0.3f)" % (sc_tr['test_jaccard_weighted'].mean(), sc_tr['test_jaccard_weighted'].std() * 2))
+		#print("%0.3f (+/- %0.3f)" % (sc_ts['test_jaccard_weighted'].mean(), sc_ts['test_jaccard_weighted'].std() * 2))
+		
 	pred_validate = KNN.predict(X_validate)
 	pred_train = KNN.predict(X_train)
 
